@@ -1,0 +1,259 @@
+<!DOCTYPE HTML>
+<html lang="en">
+	<head>
+		<title>COKE - particle system test</title>
+		<meta charset="utf-8">
+		<style type="text/css">
+			body {
+				background-color: #ffffff;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body onload="init();">
+
+	
+		<script type="text/javascript" src="js/PhysicsParticle.js"></script>	
+		<script type="text/javascript" src="js/Vector2.js"></script>
+		
+		<script type="text/javascript">
+
+			// screen size variables
+			var SCREEN_WIDTH = window.innerWidth,
+			SCREEN_HEIGHT = window.innerHeight,
+			HALF_WIDTH = window.innerWidth / 2,
+			HALF_HEIGHT = window.innerHeight / 2,
+
+			// canvas element and 2D context
+			canvas = document.createElement( 'canvas' ),
+			context = canvas.getContext( '2d' ),
+
+			particles = [],
+			MAX_PARTICLES = 300,
+                        _blue = {r:35,g:65,b:138},
+                        _yellow = {r:255,g:204,b:51},
+                        _pink = {r:168,g:80,b:178},
+                        _grey = {r:61,g:61,b:61},
+                        _red = color = {r:233,g:75,b:85},
+                        colors = [_blue,_yellow,_pink,_grey,_red],
+                        sizes = [10,20,30],
+			
+			dragging = false;
+		
+			addPart();
+			
+			function addPart()
+                        {
+                            var count = particles.length;
+                            var color = {r:0,g:0,b:0};
+                            if(count <= 60)
+                            {
+                                color = _blue;
+                                makeParticle(1,'left',color);
+                            }
+                            else if(count > 60 && count <=120)
+                            {
+                                color = _yellow;
+                                makeParticle(1,'top',color);
+                            }
+                            else if(count > 120 && count <= 180)
+                            {
+                                color = _pink;
+                                makeParticle(1,'right',color);
+                            }
+                            else if(count > 180 && count <= 240)
+                            {
+                                color = _grey;
+                                makeParticle(1,'bottom',color);
+                            }
+                            else if(count > 240 && count <= 300)
+                            {
+                                color = _red;
+                                makeParticle(1,'center',color);
+                            }
+			    if(particles.length<MAX_PARTICLES)setTimeout(addPart, 50); 
+				
+			}
+			
+			function init()
+			{
+				// CANVAS SET UP
+			
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				container.appendChild(canvas); 
+				canvas.width = SCREEN_WIDTH; 
+				canvas.height = SCREEN_HEIGHT;
+	
+				document.addEventListener( 'mousedown', onMouseDown, false );
+				document.addEventListener('mouseup', onMouseUp, false);
+				document.addEventListener('touchstart', onMouseDown, false);
+		
+				setInterval(loop, 1000 / 30);
+				//loop();
+			}
+
+			function onMouseDown(event) 
+			{
+				/*var xmouse, ymouse,
+				randColor, randSize;
+				xmouse = event.clientX;
+				ymouse = event.clientY;
+				randColor = shuffle(colors);
+				randSize = shuffle(sizes);
+                            
+				for(var i=0; i<1;i++)
+				{
+					//var particle = new PhysicsParticle(xmouse, ymouse, 50, randColor[0]); 
+					particle.pos.reset(xmouse, ymouse); 
+					particle.vel.reset(1,0);
+					particle.vel.rotate(Math.random()*360); 
+				
+					particle.drag = 0.96;
+						
+					// add it to the array
+					particles.push(particle); 	
+				}*/
+				var dragger = particles[0];
+				dragger.pos.reset(event.clientX,event.clientY);
+				document.addEventListener('mousemove', onMouseMove, false);
+			}
+			
+			function onMouseUp(event)
+			{
+				//particles.pop();
+				document.removeEventListener('mousemove', onMouseMove, false);
+				dragging = false;
+			}
+			
+			function onMouseMove(event)
+			{
+				var dragger = particles[0];
+				dragger.pos.reset(event.clientX,event.clientY);
+				dragging = true;
+			}
+			
+			function loop()
+			{
+				var repelforce = new Vector2(0,0),
+				mag, 
+				repelstrength; 
+				
+				for (i=0; i<particles.length; i++)
+				{
+					var p1 = particles[i]; 
+					
+					repelforce.copyFrom(p1.pos);
+	 				repelforce.x-=HALF_WIDTH; 
+					repelforce.y-=HALF_HEIGHT; 
+							
+					mag = repelforce.magnitude(); 
+	 				repelstrength = (mag - 700) *-0.1; 
+					
+	 				if(repelstrength<0)
+					{
+						repelforce.multiplyEq(repelstrength/mag);
+						p1.force.plusEq(repelforce); 			
+					}
+	
+					if(i>=particles.length-1) continue; 
+					
+					for(j=i+1; j<particles.length; j++)
+					{
+						var p2 = particles[j];
+						
+						repelforce.copyFrom(p2.pos); 
+						repelforce.minusEq(p1.pos); 
+						mag = repelforce.magnitude();
+						
+						// REPEL STRENGTH
+						if(p1.name == 'dragger'&&dragging)repelstrength = 120-mag;
+						else repelstrength = 70-mag; 
+						
+						if((repelstrength>0)&&(mag>0))
+						{
+							repelforce.multiplyEq(repelstrength*0.025 / mag); 
+					
+							p1.force.minusEq(repelforce); 
+							p2.force.plusEq(repelforce); 
+						}	
+					}	
+				}
+				// clear the canvas
+				
+				context.clearRect(0,0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+				context.strokeStyle = '#fff'; 
+				context.lineWidth = 1;
+				
+			  	// iteratate through each particle
+				for (i=0; i<particles.length; i++)
+				{
+					var particle = particles[i]; 
+					
+					particle.update();
+					
+					particle.render(context); 
+				}
+			}
+			
+			function makeParticle(particleCount,pos,color)
+                        {
+                            var posx, posy,
+                            randSize;
+                            
+                            
+                            if(pos == 'left')
+                            {
+                                posx = HALF_WIDTH/2;
+                                posy = HALF_HEIGHT;
+                            }
+                            else if(pos == 'top')
+                            {
+                                posx = HALF_WIDTH;
+                                posy = HALF_HEIGHT/2;
+                            }
+                            else if(pos == 'right')
+                            {
+                                posx = HALF_WIDTH + (HALF_WIDTH/2);
+                                posy = HALF_HEIGHT;
+                            }
+                            else if(pos == 'bottom')
+                            {
+                                posx = HALF_WIDTH;
+                                posy = HALF_HEIGHT + (HALF_HEIGHT/2);
+                            }
+                            else if(pos == 'center')
+                            {
+                                posx = HALF_WIDTH;
+                                posy = HALF_HEIGHT;
+                            }
+                            
+			    for(var i=0; i<particleCount;i++)
+                            {
+				// create a new particle in the middle of the stage
+				if(particles.length == 0)randSize = [80];
+				else randSize = shuffle(sizes);
+				var particle = new PhysicsParticle(posx, posy, randSize[0], color);
+				particle.pos.reset(posx, posy); 
+				particle.vel.reset(1,0);
+				particle.vel.rotate(Math.random()*360); 
+				
+				particle.drag = 0.96;
+						
+				// add it to the array
+				particles.push(particle); 
+			    }
+			}
+                        
+                        function shuffle(a)
+                        {
+                            for(var j, x, i = a.length; i; j = parseInt(Math.random() * i), x = a[--i], a[i] = a[j], a[j] = x);
+                            return a;
+                        }
+
+		</script>
+	</body>
+</html>
